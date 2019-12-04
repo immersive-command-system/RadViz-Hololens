@@ -12,7 +12,7 @@ public class RadiationPointSubscriber : PointCloudVisualizer2, DataServer.DataSu
 {
     /// <value> Attach DataServer object. If nonexistant, create an empty GameObject and attach the script `DataServer.cs`.</value>
     //public DataServer server;
-
+    public Material mat;
     /// <value> Setting this to true will give a horizontal view of the data.</value>
     public bool flipYZ = false;
     public int total_particles;
@@ -20,7 +20,9 @@ public class RadiationPointSubscriber : PointCloudVisualizer2, DataServer.DataSu
     private float size = 1;
     /// <value> The maximum radiation value. Used for deciding how to map the range of radiation values to colors.</value>
     //private float max = 0.0007f;
-    private float max = 0.16f;
+    private float max = 34f;
+    private float min = 1f;
+    public GameObject parentObject;
     /// <value> The octree for holding/organizing the radiation voxels efficiently.</value>
     private BoundsOctree<float> boundsTree = null;
 
@@ -34,39 +36,53 @@ public class RadiationPointSubscriber : PointCloudVisualizer2, DataServer.DataSu
         SetColor(new Color(1, 1, 1, 0.2f));
         SetEmissionColor(new Color(0, 0, 0, 0));
 
-       
-        StartCoroutine(PointCloudGenerator());
+
+        //StartCoroutine(PointCloudGenerator());
 
     }
     IEnumerator PointCloudGenerator()
     {
-        for (int j = 0; j <= 27; j++)
-        {
-            string path = "radiation/radiation_data"+j.ToString();
+       // for (int j = 0; j <= 27; j++)
+       //{
+            string path = "radiation/radiation_data27";
 
             List<Dictionary<string, string>> data = CSVReader.Read(path);
 
             total_particles = data.Count;
 
             float x, y, z, intensity;
-            //Makes points from file
-        
-                for (int i = 0; i < data.Count; i++)
-                {
-                    x = float.Parse(data[i]["x"]);
-                    y = float.Parse(data[i]["y"]);
-                    z = float.Parse(data[i]["z"]);
-                    intensity = float.Parse(data[i]["intensity"]);
+        //Makes points from file
 
-                    GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                    sphere.transform.position = new Vector3(x, z, y);
-                    sphere.transform.localScale = new Vector3(0.05f, 0.05f, 0.05f);
-                    var sphereRenderer = sphere.GetComponent<Renderer>();
-                    sphereRenderer.material.SetColor("_Color", colorFromIntensity(intensity));
+        for (int i = 0; i < total_particles; i++)
+        {
+            x = float.Parse(data[i]["x"]);
+            y = float.Parse(data[i]["y"]);
+            z = float.Parse(data[i]["z"]);
+            intensity = float.Parse(data[i]["intensity"]);
 
-                }
-                yield return new WaitForSeconds(2.0f);
+            
+            
+                GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                cube.transform.position = new Vector3(x * 0.05f, z * 0.05f, y * 0.05f);
+                cube.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
+                var cubeRenderer = cube.GetComponent<Renderer>();
+            // sphereRenderer.material.SetFloat("_Mode", 3);
+            //sphereRenderer.material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            //sphereRenderer.material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            //sphereRenderer.material.SetInt("_ZWrite", 0);
+            //sphereRenderer.material.DisableKeyword("_ALPHATEST_ON");
+            //sphereRenderer.material.EnableKeyword("_ALPHABLEND_ON");
+            //sphereRenderer.material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            //sphereRenderer.material.renderQueue = 3000;
+           // cubeRenderer.material.SetColor("_Color", Color.red);
+            cubeRenderer.material.SetColor("_Color", colorFromIntensity(intensity));
+            cube.transform.parent = parentObject.transform;
+            cube.GetComponent<BoxCollider>().enabled = false;
+            
+  
         }
+                yield return new WaitForSeconds(2.0f);
+       
     }
     
     /// <summary>
@@ -141,8 +157,9 @@ public class RadiationPointSubscriber : PointCloudVisualizer2, DataServer.DataSu
     {
         float intensity_norm = Mathf.Min(Mathf.Abs(intensity), max) / max;
         // We use 0.85 to prevent looping from red to red (since both 0 and 1 on the hue scale look like red).
-        Color temp = Color.HSVToRGB(0.85f * (1 - intensity_norm), 1, 1);
+        Color temp = Color.HSVToRGB(0, 1, 1*intensity_norm);
         // Use cubic scaling for alpha channel. We want points with low intensity to be deemphasized.
-        return new Color(temp.r, temp.g, temp.b, intensity_norm * intensity_norm * intensity_norm);
+        //return new Color(temp.r, temp.g, temp.b, intensity_norm* intensity_norm* intensity_norm);
+        return new Color(temp.r, temp.g, temp.b, intensity_norm);
     }
 }
